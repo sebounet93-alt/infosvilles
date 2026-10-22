@@ -1,0 +1,18 @@
+{
+  "routes": [
+    { "path": "/", "name": "Accueil", "description": "Page d'accueil avec recherche, catégories et communes en vedette" },
+    { "path": "/recherche", "name": "Rechercher une commune", "description": "Recherche de communes par nom, code postal ou région, avec filtres thématiques" },
+    { "path": "/departements", "name": "Départements", "description": "Liste des départements français regroupés par région" },
+    { "path": "/departement/[slug]", "name": "Fiche département", "description": "Communes analysées d'un département donné (slug = code département)" },
+    { "path": "/ville/[slug]", "name": "Fiche commune", "description": "Analyse détaillée d'une commune : indicateurs, points forts, limites, sources, témoignages" },
+    { "path": "/classement", "name": "Classement des communes", "description": "Classement interactif des communes par indicateur" },
+    { "path": "/comparer", "name": "Comparer des communes", "description": "Comparaison côte à côte de jusqu'à 4 communes" },
+    { "path": "/methodologie", "name": "Méthodologie & sources", "description": "Méthodologie, sources des indicateurs et traitement des témoignages" },
+    { "path": "/a-propos", "name": "À propos", "description": "Présentation de la plateforme, mission, valeurs et contact" },
+    { "path": "/mentions-legales", "name": "Mentions légales", "description": "Mentions légales et statut des données" },
+    { "path": "/politique-confidentialite", "name": "Politique de confidentialité", "description": "Politique de confidentialité et traitement des données (RGPD)" },
+    { "path": "/robots.txt", "name": "Robots", "description": "Fichier robots.txt pour les moteurs de recherche" },
+    { "path": "/sitemap.xml", "name": "Sitemap", "description": "Plan du site pour les moteurs de recherche" }
+  ],
+  "note": "Toutes les routes listées sont réellement implémentées dans l'application Next.js App Router. Les routes dynamiques utilisent la syntaxe [slug]. Les données sont actuellement des données fictives de démonstration."
+}

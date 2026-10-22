@@ -1,0 +1,174 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Surfaces — blanc cassé chaud sur base slate */
+    --background: 210 20% 98%;
+    --foreground: 215 28% 17%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+
+    /* Marque — vert sapin/émeraude profond (actions, liens, scores positifs) */
+    --primary: 160 84% 24%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Accent secondaire — bleu nuit slate */
+    --secondary: 215 30% 92%;
+    --secondary-foreground: 215 30% 24%;
+
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 14% 42%;
+
+    --accent: 215 32% 27%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 160 84% 26%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 36 80% 38%;
+    /* Texte lisible sur fond ambré pâle (bg-warning/10) et sur fond clair */
+    --warning-foreground: 36 80% 24%;
+
+    --border: 215 18% 88%;
+    --input: 215 18% 88%;
+    --ring: 160 84% 24%;
+
+    --radius: 0.625rem;
+
+    /* Chart ramp */
+    --chart-1: 160 84% 24%;
+    --chart-2: 215 32% 27%;
+    --chart-3: 36 80% 38%;
+    --chart-4: 210 40% 55%;
+    --chart-5: 0 72% 42%;
+  }
+
+  .dark {
+    --background: 215 28% 10%;
+    --foreground: 210 20% 94%;
+
+    --card: 215 25% 14%;
+    --card-foreground: 210 20% 94%;
+
+    --popover: 215 25% 14%;
+    --popover-foreground: 210 20% 94%;
+
+    --primary: 158 60% 45%;
+    --primary-foreground: 215 28% 10%;
+
+    --secondary: 215 20% 22%;
+    --secondary-foreground: 210 20% 94%;
+
+    --muted: 215 20% 19%;
+    --muted-foreground: 210 14% 66%;
+
+    --accent: 215 30% 35%;
+    --accent-foreground: 210 20% 94%;
+
+    --destructive: 0 68% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 60% 45%;
+    --success-foreground: 215 28% 10%;
+
+    --warning: 36 75% 50%;
+    /* Texte ambré clair lisible sur fond sombre teinté (bg-warning/10) */
+    --warning-foreground: 36 90% 78%;
+
+    --border: 215 18% 24%;
+    --input: 215 18% 24%;
+    --ring: 158 60% 45%;
+
+    --chart-1: 158 60% 45%;
+    --chart-2: 215 30% 45%;
+    --chart-3: 36 75% 50%;
+    --chart-4: 210 45% 60%;
+    --chart-5: 0 68% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    line-height: 1.6;
+  }
+  h1, h2, h3, .font-serif {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+  }
+
+  /* Focus visible et cohérent */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  /* Largeur de lecture ~65-75 caractères */
+  .reading-width {
+    max-width: 68ch;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out both;
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.4) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Animations discrètes et non bloquantes */
+  .transition-soft {
+    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/*
+ * Animations non essentielles désactivées si l'utilisateur préfère
+ * un rendu statique ( WCAG 2.2 — animation from interactions ).
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
