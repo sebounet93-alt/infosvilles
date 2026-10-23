@@ -1,4 +1,5 @@
-ï»¿import Link from 'next/link';
+export const dynamic = 'force-dynamic';
+import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import {
   Hero,
@@ -14,7 +15,7 @@ import pool from '@/lib/db';
 export const metadata = pageMetadata({
   title: 'Choisir sa ville : cadre de vie, immobilier et services',
   description:
-    'DÃ©couvrez un outil de comparaison des communes franÃ§aises selon le budget immobilier, les services, les transports et le cadre de vie.',
+    'Découvrez un outil de comparaison des communes françaises selon le budget immobilier, les services, les transports et le cadre de vie.',
   path: '/',
 });
 
@@ -67,11 +68,11 @@ export default async function HomePage() {
     stats: {
       apartmentPriceM2: {
         raw: Number(row.avg_price_sqm_apt),
-        display: `${Number(row.avg_price_sqm_apt).toLocaleString('fr-FR')} â‚¬`,
+        display: `${Number(row.avg_price_sqm_apt).toLocaleString('fr-FR')} €`,
       },
       housePriceM2: {
         raw: Number(row.avg_price_sqm_house),
-        display: `${Number(row.avg_price_sqm_house).toLocaleString('fr-FR')} â‚¬`,
+        display: `${Number(row.avg_price_sqm_house).toLocaleString('fr-FR')} €`,
       },
     },
     lastUpdated: new Date().toISOString(),
@@ -94,7 +95,7 @@ export default async function HomePage() {
               Exemples de fiches communes
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Des fiches complÃ¨tes alimentÃ©es en direct par PostgreSQL : scores, immobilier et cadre de vie.
+              Des fiches complètes alimentées en direct par PostgreSQL : scores, immobilier et cadre de vie.
             </p>
           </div>
           <Link
