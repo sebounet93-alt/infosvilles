@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -15,12 +15,13 @@ import {
 import {
   COMPARE_METRICS,
   MAX_COMMUNES,
-  loadCompareColumns,
-  getAllCompareEntries,
+  
+  
   type CompareColumn,
   type CompareEntry,
   type CompareMetric,
 } from '@/lib/compare';
+import { loadCompareColumns, getAllCompareEntries } from '@/app/comparer/actions';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -121,16 +122,13 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
           Comparer des communes
         </h1>
         <p className="mt-3 text-muted-foreground text-pretty">
-          Sélectionnez jusqu’à {MAX_COMMUNES} communes et comparez leurs indicateurs
-          côte à côte. Les valeurs proviennent d’exemples de sources, non de données
+          Sélectionnez jusquâ€™Ã  {MAX_COMMUNES} communes et comparez leurs indicateurs
+          cÃ´te Ã  cÃ´te. Les valeurs proviennent d'exemples de sources, non de données
           officielles connectées.
         </p>
       </header>
 
-      <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-        Comparaison de démonstration : les chiffres affichés sont fictifs et
-        illustrent le fonctionnement futur du service.
-      </div>
+      
 
       {status === 'error' && (
         <section className="mt-8" role="alert">
@@ -140,10 +138,10 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
               Impossible de charger la comparaison
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Vérifiez votre connexion puis réessayez.
+              VÃ©rifiez votre connexion puis rÃ©essayez.
             </p>
             <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>
-              Réessayer
+              RÃ©essayer
             </Button>
           </div>
         </section>
@@ -169,7 +167,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
               {c.name}
             </Link>
             <div className="mt-1 text-xs text-muted-foreground">
-              {c.postalCode} · {c.region}
+              {c.postalCode} Â· {c.region}
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
               {c.departmentName}
@@ -179,7 +177,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
                 variant="outline"
                 className="mt-2 w-fit border-warning/50 text-warning-foreground bg-warning/10 text-[10px]"
               >
-                Démonstration
+                DÃ©monstration
               </Badge>
             )}
           </div>
@@ -189,7 +187,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
           <button
             onClick={() => setPicker((v) => !v)}
             className="flex w-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Ajouter une commune à comparer"
+            aria-label="Ajouter une commune Ã  comparer"
           >
             <Plus className="h-6 w-6" aria-hidden="true" />
             Ajouter une commune
@@ -212,8 +210,8 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une commune…"
-              aria-label="Rechercher une commune à ajouter"
+              placeholder="Rechercher une communeâ€¦"
+              aria-label="Rechercher une commune Ã  ajouter"
               className="h-8 flex-1 bg-transparent text-sm outline-none"
             />
           </div>
@@ -230,7 +228,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
                   <div>
                     <div className="font-medium">{e.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {e.postalCode} · {e.region}
+                      {e.postalCode} Â· {e.region}
                     </div>
                   </div>
                   {alreadySelected ? (
@@ -243,7 +241,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
             })}
             {filteredEntries.length === 0 && (
               <p className="col-span-full py-4 text-center text-sm text-muted-foreground">
-                Aucune commune trouvée pour « {query} ».
+                Aucune commune trouvÃ©e pour Â« {query} Â».
               </p>
             )}
           </div>
@@ -254,7 +252,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
         <section className="mt-8" aria-live="polite" aria-busy="true">
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            Chargement de la comparaison…
+            Chargement de la comparaisonâ€¦
           </p>
         </section>
       )}
@@ -262,9 +260,9 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
       {status === 'ready' && columns.length === 0 && (
         <div className="mt-10 rounded-2xl border border-dashed border-border bg-muted/30 p-12 text-center">
           <GitCompare className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <h3 className="mt-4 font-serif text-lg font-semibold">Aucune commune sélectionnée</h3>
+          <h3 className="mt-4 font-serif text-lg font-semibold">Aucune commune sÃ©lectionnÃ©e</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Ajoutez au moins deux communes pour démarrer la comparaison.
+            Ajoutez au moins deux communes pour dÃ©marrer la comparaison.
           </p>
         </div>
       )}
@@ -272,17 +270,17 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
       {status === 'ready' && columns.length === 1 && (
         <div className="mt-10 rounded-2xl border border-dashed border-border bg-muted/30 p-12 text-center">
           <GitCompare className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
-          <h3 className="mt-4 font-serif text-lg font-semibold">Une seule commune sélectionnée</h3>
+          <h3 className="mt-4 font-serif text-lg font-semibold">Une seule commune sÃ©lectionnÃ©e</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            Ajoutez au moins une autre commune pour comparer leurs indicateurs côte à côte.
+            Ajoutez au moins une autre commune pour comparer leurs indicateurs cÃ´te Ã  cÃ´te.
           </p>
         </div>
       )}
 
       {hasDuplicate && (
         <div className="mt-6 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-          Vous avez sélectionné la même commune plusieurs fois. La comparaison est plus
-          pertinente avec des communes différentes.
+          Vous avez sÃ©lectionnÃ© la mÃªme commune plusieurs fois. La comparaison est plus
+          pertinente avec des communes diffÃ©rentes.
         </div>
       )}
 
@@ -295,7 +293,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <caption className="sr-only">
-                      Comparaison des indicateurs de la catégorie {category} pour les communes sélectionnées.
+                      Comparaison des indicateurs de la catÃ©gorie {category} pour les communes sÃ©lectionnÃ©es.
                     </caption>
                     <thead>
                       <tr className="border-b border-border bg-muted/40 text-left">
@@ -311,7 +309,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
                               {c.name}
                             </Link>
                             <div className="text-xs font-normal text-muted-foreground">
-                              {c.postalCode} · {c.departmentName}
+                              {c.postalCode} Â· {c.departmentName}
                             </div>
                           </th>
                         ))}
@@ -343,7 +341,7 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
                                     )}
                                   </div>
                                 ) : (
-                                  <span className="text-muted-foreground">—</span>
+                                  <span className="text-muted-foreground">â€”</span>
                                 )}
                               </td>
                             );
@@ -358,15 +356,15 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
           ))}
 
           <Card className="mt-8 bg-muted/30 p-5">
-            <h2 className="font-serif text-base font-semibold">Exemples de sources envisagées</h2>
+            <h2 className="font-serif text-base font-semibold">Exemples de sources envisagÃ©es</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Les sources ci-dessous sont des exemples illustratifs. Aucune donnée
-              officielle n’est encore connectée.
+              Les sources ci-dessous sont des exemples illustratifs. Aucune donnÃ©e
+              officielle nâ€™est encore connectÃ©e.
             </p>
             <ul className="mt-3 grid gap-2 sm:grid-cols-2">
               {SOURCE_EXAMPLES.map((s) => (
                 <li key={s} className="text-sm text-muted-foreground">
-                  · {s}
+                  Â· {s}
                 </li>
               ))}
             </ul>
@@ -378,10 +376,10 @@ export function CompareClient({ initialSlugs, initialColumns, allEntries }: Prop
 }
 
 const SOURCE_EXAMPLES: string[] = [
-  'Notaires de France — bases BIEN (Exemple de source envisagée)',
-  'INSEE — populations légales et densité (Exemple de source envisagée)',
-  'DGCL — données locales des finances publiques (Exemple de source envisagée)',
-  'SSMSI — données de la délinquance (Exemple de source envisagée)',
-  'Éducation nationale — indice scolaire (Exemple de source envisagée)',
-  'ATMO France — qualité de l’air (Exemple de source envisagée)',
+  'Notaires de France â€” bases BIEN (Exemple de source envisagÃ©e)',
+  'INSEE â€” populations lÃ©gales et densitÃ© (Exemple de source envisagÃ©e)',
+  'DGCL â€” données locales des finances publiques (Exemple de source envisagÃ©e)',
+  'SSMSI â€” données de la dÃ©linquance (Exemple de source envisagÃ©e)',
+  'Ã‰ducation nationale â€” indice scolaire (Exemple de source envisagÃ©e)',
+  'ATMO France â€” qualitÃ© de lâ€™air (Exemple de source envisagÃ©e)',
 ];

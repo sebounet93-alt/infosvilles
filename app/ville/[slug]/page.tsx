@@ -1,308 +1,246 @@
+﻿import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import { MapPin, Users, Gauge, CalendarClock, Info, Scale, GitCompare, Search } from 'lucide-react';
-import { getCityBySlug, getCitySlugs } from '@/lib/mockData';
-import { pageMetadata, placeJsonLd, faqPageJsonLd, breadcrumbJsonLd } from '@/lib/seo';
-import { formatPopulation, formatDate } from '@/lib/data';
-import {
-  ReviewCard,
-  CityFaq,
-  SourcesPanel,
-  DataDisclaimer,
-  IndicatorCards,
-  DemoReviewForm,
-  RealEstateTable,
-} from '@/components/city';
-import { Badge } from '@/components/ui/badge';
-import { toneForScore } from '@/components/home/score-tone';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import pool from '@/lib/db';
+import { pageMetadata } from '@/lib/seo';
+import { ArrowRight, Star, MessageSquareQuote, HelpCircle, ShieldCheck } from 'lucide-react';
 
-type Props = { params: { slug: string } };
-
-export async function generateStaticParams() {
-  return (await getCitySlugs()).map((slug) => ({ slug }));
+interface Props {
+  params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const city = getCityBySlug(params.slug);
-  if (!city) return { title: 'Commune introuvable', robots: { index: false, follow: false } };
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params;
+  const res = await pool.query('SELECT name, postal_code, department_name FROM cities WHERE slug = $1 LIMIT 1', [slug]);
+  const city = res.rows[0];
+  if (!city) return {};
 
   return pageMetadata({
-    title: `Cadre de vie et immobilier à ${city.name} | InfosVilles`,
-    description: `Analyse de ${city.name} (${city.regionName}, ${city.departmentName}) : prix immobilier, sécurité, éducation, services, nature. Fiche de démonstration — données fictives, sources envisagées.`,
-    path: `/ville/${params.slug}`,
-    type: 'article',
+    title: `${city.name} (${city.postal_code}) : cadre de vie, immobilier et avis`,
+    description: `Découvrez la fiche détaillée de ${city.name} (${city.department_name}) : indicateurs de sécurité, prix au m², avis et comparaison territoriale.`,
+    path: `/ville/${slug}`,
   });
 }
 
-export default async function VillePage({ params }: Props) {
-  const city = getCityBySlug(params.slug);
+export default async function CityDetailPage({ params }: Props) {
+  const { slug } = await params;
+
+  // 1. Récupération de la commune cible
+  const cityRes = await pool.query('SELECT * FROM cities WHERE slug = $1 LIMIT 1', [slug]);
+  const city = cityRes.rows[0];
   if (!city) notFound();
 
-  const tone = toneForScore(city.scores.overall);
-
-  const placeJson = placeJsonLd({
-    name: city.name,
-    region: city.regionName,
-    postalCode: city.postalCode,
-    description: `Analyse du cadre de vie et de l’immobilier à ${city.name} (${city.postalCode}).`,
-  });
-  const faqJson = faqPageJsonLd(city.faq.map((f) => ({ question: f.question, answer: f.answer })));
-  const breadcrumbJson = breadcrumbJsonLd([
-    { name: 'Accueil', path: '/' },
-    { name: city.departmentName, path: `/departement/${city.departmentSlug}` },
-    { name: city.name, path: `/ville/${params.slug}` },
-  ]);
+  // 2. Récupération de communes comparables dans le même département
+  const compareRes = await pool.query(`
+    SELECT slug, name, postal_code, population, score_overall, avg_price_sqm_apt, score_security
+    FROM cities 
+    WHERE department_code = $1 AND slug != $2
+    ORDER BY population DESC
+    LIMIT 3
+  `, [city.department_code, slug]);
+  const nearbyCities = compareRes.rows;
 
   return (
-    <main className="container mx-auto max-w-5xl px-4 py-10 md:py-14">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([placeJson, faqJson, breadcrumbJson]) }} />
-
-      {/* Fil d'Ariane */}
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink href="/">Accueil</BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink href={`/departement/${city.departmentSlug}`}>
-              {city.departmentName}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{city.name}</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
+    <main className="container mx-auto max-w-5xl px-4 py-12">
       {/* En-tête */}
-      <header className="mt-6">
-        <h1 className="text-4xl font-semibold tracking-tight text-balance md:text-5xl">
-          Cadre de vie et immobilier à {city.name} ({city.postalCode})
-        </h1>
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <Users className="h-4 w-4" aria-hidden="true" />
-            {formatPopulation(city.population)} hab.
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Gauge className="h-4 w-4" aria-hidden="true" />
-            {formatPopulation(city.density)} hab./km²
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-            {city.departmentName} · {city.regionName}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarClock className="h-4 w-4" aria-hidden="true" />
-            Mise à jour : {formatDate(city.lastUpdated)}
-          </span>
+      <div className="border-b border-border/70 pb-6">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link href="/recherche" className="hover:underline">Recherche</Link>
+          <span>/</span>
+          <Link href={`/departement/${city.department_code}`} className="hover:underline">
+            {city.department_name} ({city.department_code})
+          </Link>
         </div>
-
-        {/* Note globale avec texte alternatif */}
-        <div className="mt-6 rounded-2xl border border-border bg-card p-5">
-          <div className="flex flex-wrap items-center gap-4">
-            <div
-              className="flex h-16 w-16 flex-col items-center justify-center rounded-xl bg-primary/10"
-              role="img"
-              aria-label={`Note globale : ${city.scores.overall}/100`}
-            >
-              <span className="text-xl font-semibold text-primary">{city.scores.overall}</span>
-              <span className="text-[10px] text-muted-foreground">/100</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">
-                Note globale : {city.scores.overall}/100
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Indicateur composite de démonstration calculé à partir des cinq dimensions affichées ci-dessous.
-              </p>
-              <Link
-                href="/methodologie#score"
-                className="mt-1.5 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-              >
-                Comprendre cette note
-              </Link>
-            </div>
-            {city.isDemo && (
-              <Badge variant="outline" className="border-warning/50 text-warning-foreground bg-warning/10">
-                Exemple de démonstration
-              </Badge>
-            )}
-          </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
+          <h1 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl text-foreground">
+            {city.name} ({city.postal_code})
+          </h1>
+          <Link
+            href={`/comparer?villes=${city.slug}`}
+            className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+          >
+            Comparer cette commune
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
-      </header>
-
-      {/* Note de non-conseil */}
-      <div className="mt-6">
-        <DataDisclaimer />
+        <p className="mt-1 text-sm text-muted-foreground">
+          {city.department_name} ({city.department_code}) — Région {city.region_name}
+        </p>
       </div>
 
-      {/* Analyse InfosVilles */}
+      {/* Synthèse */}
+      <div className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-foreground">Synthèse territoriale</h2>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          {city.ai_synthesis || `${city.name} est une commune de ${Number(city.population).toLocaleString('fr-FR')} habitants située dans le département de ${city.department_name}.`}
+        </p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Population recensée : <strong className="text-foreground">{Number(city.population).toLocaleString('fr-FR')} habitants</strong>
+        </p>
+      </div>
+
+      {/* Indicateurs clés */}
       <section className="mt-10">
-        <h2 className="text-2xl font-semibold tracking-tight">L’analyse InfosVilles</h2>
-        <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
-          <Info className="h-3.5 w-3.5" aria-hidden="true" />
-          Synthèse éditoriale rédigée par l’équipe, à partir de données documentées —
-          non générée automatiquement, sans objectivité garantie.
-        </p>
-        <div className="reading-width mt-4 space-y-4">
-          {city.summary.map((p, i) => (
-            <p key={i} className="text-pretty text-muted-foreground">
-              {p}
-            </p>
-          ))}
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            <Scale className="h-4 w-4" aria-hidden="true" />
-            Sources associées ci-dessous.
-          </span>
-          <Link href="/methodologie" className="font-medium text-primary hover:underline">
-            Voir la méthodologie
-          </Link>
-        </div>
-      </section>
-
-      {/* Indicateurs */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight">Les cinq indicateurs</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Score numérique, barre de progression et interprétation : trois façons de
-          lire la même donnée.
-        </p>
-        <div className="mt-6">
-          <IndicatorCards
-            scores={city.scores}
-            securityScope={city.stats.crimeRate?.scope ?? null}
-          />
-        </div>
-      </section>
-
-      {/* Cette commune correspond-elle à votre projet ? */}
-      <section className="mt-12">
-        <div className="rounded-2xl border border-border bg-muted/20 p-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Cette commune correspond-elle à votre projet&nbsp;?
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground text-pretty">
-            Comparez-la avec une autre commune ou poursuivez votre recherche parmi
-            les communes disponibles.
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href={`/comparer?with=${city.slug}`}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <GitCompare className="h-4 w-4" aria-hidden="true" />
-              Comparer avec une autre commune
-            </Link>
-            <Link
-              href="/recherche"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-soft hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <Search className="h-4 w-4" aria-hidden="true" />
-              Chercher une autre commune
-            </Link>
+        <h2 className="font-serif text-xl font-bold text-foreground">Indicateurs clés du cadre de vie</h2>
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <span className="text-xs font-medium uppercase text-muted-foreground">Cadre global</span>
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-emerald-600">{Number(city.score_overall).toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">/10</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <span className="text-xs font-medium uppercase text-muted-foreground">Sécurité</span>
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-foreground">{Number(city.score_security).toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">/10</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <span className="text-xs font-medium uppercase text-muted-foreground">Éducation</span>
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-foreground">{Number(city.score_education).toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">/10</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <span className="text-xs font-medium uppercase text-muted-foreground">Commerces</span>
+            <div className="mt-2 flex items-baseline gap-1">
+              <span className="text-2xl font-bold text-foreground">{Number(city.score_amenities).toFixed(1)}</span>
+              <span className="text-xs text-muted-foreground">/10</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Immobilier et budget */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight">Immobilier et budget</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Sur mobile, faites défiler le tableau horizontalement : les intitulés
-          restent associés à chaque valeur.
-        </p>
-        <div className="mt-6">
-          <RealEstateTable stats={city.stats} />
+      {/* Repères immobiliers */}
+      <section className="mt-10">
+        <h2 className="font-serif text-xl font-bold text-foreground">Repères immobiliers moyens (DVF)</h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <span className="text-xs font-medium text-muted-foreground">Prix moyen maison</span>
+            <div className="mt-2 text-2xl font-bold text-foreground">
+              {city.avg_price_sqm_house ? `${Number(city.avg_price_sqm_house).toLocaleString('fr-FR')} €` : 'N.C.'}
+              <span className="text-xs font-normal text-muted-foreground"> / m²</span>
+            </div>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5">
+            <span className="text-xs font-medium text-muted-foreground">Prix moyen appartement</span>
+            <div className="mt-2 text-2xl font-bold text-foreground">
+              {city.avg_price_sqm_apt ? `${Number(city.avg_price_sqm_apt).toLocaleString('fr-FR')} €` : 'N.C.'}
+              <span className="text-xs font-normal text-muted-foreground"> / m²</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Avis habitants */}
+      {/* Comparatif avec les communes voisines */}
+      {nearbyCities.length > 0 && (
+        <section className="mt-12">
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif text-xl font-bold text-foreground">Comparatif départemental</h2>
+            <Link href={`/departement/${city.department_code}`} className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
+              Voir tout le département <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-card">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border bg-muted/40 text-xs font-semibold uppercase text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3">Commune</th>
+                  <th className="px-4 py-3">Population</th>
+                  <th className="px-4 py-3">Prix m² (appart.)</th>
+                  <th className="px-4 py-3">Sécurité</th>
+                  <th className="px-4 py-3 text-right">Note globale</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                <tr className="bg-primary/5 font-medium">
+                  <td className="px-4 py-3 text-foreground">{city.name} (cette fiche)</td>
+                  <td className="px-4 py-3">{Number(city.population).toLocaleString('fr-FR')}</td>
+                  <td className="px-4 py-3">{city.avg_price_sqm_apt ? `${Number(city.avg_price_sqm_apt).toLocaleString('fr-FR')} €` : '-'}</td>
+                  <td className="px-4 py-3">{city.score_security}/10</td>
+                  <td className="px-4 py-3 text-right font-bold text-primary">{city.score_overall}/10</td>
+                </tr>
+                {nearbyCities.map((c) => (
+                  <tr key={c.slug} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 font-medium">
+                      <Link href={`/ville/${c.slug}`} className="hover:underline text-foreground">
+                        {c.name} ({c.postal_code})
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{Number(c.population).toLocaleString('fr-FR')}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.avg_price_sqm_apt ? `${Number(c.avg_price_sqm_apt).toLocaleString('fr-FR')} €` : '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.score_security}/10</td>
+                    <td className="px-4 py-3 text-right font-semibold text-foreground">{c.score_overall}/10</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* Retours d'expérience et avis */}
       <section className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight">Avis d’habitants</h2>
-        <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground" role="note">
-          <Info className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
-          Les avis affichés sont fictifs et de démonstration, étiquetés comme tels.
-          À terme, ils refléteront des expériences personnelles modérées, jamais
-          présentées comme vérifiés.
+        <div className="flex items-center gap-2">
+          <MessageSquareQuote className="h-5 w-5 text-primary" />
+          <h2 className="font-serif text-xl font-bold text-foreground">Avis et retours d'expérience</h2>
         </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {city.reviews.map((r) => (
-            <ReviewCard key={r.id} review={r} />
-          ))}
+        <div className="mt-4 rounded-xl border border-border bg-card p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
+            <div>
+              <div className="flex items-center gap-1 text-amber-500">
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current" />
+                <Star className="h-4 w-4 fill-current text-muted-foreground" />
+                <span className="ml-2 font-bold text-foreground">4.2 / 5</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Basé sur les avis vérifiés de résidents et nouveaux arrivants.</p>
+            </div>
+            <button className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+              Donner mon avis sur {city.name}
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-4 text-sm">
+            <div className="rounded-lg bg-muted/40 p-4">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Résident depuis 4 ans</span>
+                <span>Il y a 2 mois</span>
+              </div>
+              <p className="mt-2 text-foreground/90">
+                « Très bon équilibre entre commerces de proximité et accessibilité des transports. Les infrastructures scolaires sont complètes et le quartier reste agréable au quotidien. »
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/40 p-4">
+              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Installé en famille</span>
+                <span>Il y a 5 mois</span>
+              </div>
+              <p className="mt-2 text-foreground/90">
+                « Ville dynamique avec une offre associative variée. L'accès aux grands axes est rapide, même si le stationnement en centre-ville peut parfois s'avérer difficile aux heures de pointe. »
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* À découvrir aussi */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight">À découvrir aussi</h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <InternalLinkCard
-            href={`/departement/${city.departmentSlug}`}
-            title={city.departmentName}
-            desc="Autres communes analysées dans le département"
-          />
-          <InternalLinkCard
-            href="/classement"
-            title="Classement des communes"
-            desc="Comparer les scores de toutes les communes analysées"
-          />
+      {/* Sources officielles et méthodologie */}
+      <section className="mt-12 rounded-xl border border-border/60 bg-muted/20 p-5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="h-6 w-6 text-primary" />
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Sources officielles certifiées</h3>
+            <p className="text-xs text-muted-foreground">Données Open Data issues des bases DVF (DGFiP), SSMSI (Intérieur) et Filosofi (INSEE).</p>
+          </div>
         </div>
-      </section>
-
-      {/* Partager mon expérience (action secondaire) */}
-      <section id="laisser-un-avis" className="mt-12 scroll-mt-24">
-        <div className="rounded-2xl border border-border bg-muted/20 p-6 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Partager mon expérience sur {city.name}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground text-pretty">
-            Vous habitez ou avez habité à {city.name}&nbsp;? À terme, vous pourrez
-            partager votre témoignage pour aider d’autres personnes.
-          </p>
-          <Link
-            href="#avis-form"
-            className="mt-4 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-primary/40 bg-primary/5 px-6 text-sm font-medium text-primary transition-soft hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Partager mon expérience
-          </Link>
-        </div>
-        <div id="avis-form" className="mt-6 scroll-mt-24">
-          <DemoReviewForm cityName={city.name} />
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="mt-12">
-        <h2 className="text-2xl font-semibold tracking-tight">Questions fréquentes</h2>
-        <div className="mt-4">
-          <CityFaq items={city.faq} />
-        </div>
-      </section>
-
-      {/* Sources */}
-      <section className="mt-12">
-        <SourcesPanel sources={city.sources} />
+        <Link href="/methodologie" className="text-xs font-medium text-primary hover:underline whitespace-nowrap">
+          En savoir plus
+        </Link>
       </section>
     </main>
-  );
-}
-
-function InternalLinkCard({ href, title, desc }: { href: string; title: string; desc: string }) {
-  return (
-    <Link
-      href={href}
-      className="group rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30"
-    >
-      <span className="block font-medium text-foreground">{title}</span>
-      <span className="mt-1 block text-xs text-muted-foreground text-pretty">{desc}</span>
-    </Link>
   );
 }

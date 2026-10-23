@@ -1,89 +1,112 @@
+﻿import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import { MapPin, ArrowRight } from 'lucide-react';
-import { getDepartmentByCode, getCommunesByDepartment, getDepartments } from '@/lib/mockData';
-import { pageMetadata, breadcrumbJsonLd } from '@/lib/seo';
-import { CommuneCard } from '@/components/search';
-import { Badge } from '@/components/ui/badge';
+import pool from '@/lib/db';
+import { CityCard } from '@/components/home/city-card';
+import { pageMetadata } from '@/lib/seo';
 
-type Props = { params: { slug: string } };
-
-export async function generateStaticParams() {
-  const departments = await getDepartments();
-  return departments.map((d) => ({ slug: d.code }));
+interface Props {
+  params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const department = await getDepartmentByCode(params.slug);
-  if (!department) return { title: 'Département introuvable', robots: { index: false, follow: false } };
-
-  const communes = await getCommunesByDepartment(department.code);
-  const hasContent = communes.length > 0;
+export async function generateMetadata({ params }: Props) {
+  const { slug } = await params;
+  const res = await pool.query(
+    `SELECT department_name, department_code FROM cities WHERE LOWER(department_code) = LOWER($1) OR LOWER(REPLACE(department_name, ' ', '-')) = LOWER($1) LIMIT 1`,
+    [slug]
+  );
+  const dept = res.rows[0];
+  if (!dept) return {};
 
   return pageMetadata({
-    title: `${department.name} — communes analysées`,
-    description: `Découvrez les communes analysées par InfosVilles dans le département ${department.name} (${department.region}).${hasContent ? '' : ' Aucune commune disponible pour l’instant dans ce département — prototype en démonstration.'}`,
-    path: `/departement/${params.slug}`,
-    robots: hasContent ? undefined : { index: false, follow: true },
+    title: `${dept.department_name} (${dept.department_code}) : immobilier, cadre de vie et données`,
+    description: `Découvrez les statistiques officielles des communes du département ${dept.department_name} : prix au m², sécurité et services.`,
+    path: `/departement/${slug}`,
   });
 }
 
 export default async function DepartmentPage({ params }: Props) {
-  const department = await getDepartmentByCode(params.slug);
-  if (!department) notFound();
+  const { slug } = await params;
 
-  const communes = await getCommunesByDepartment(department.code);
+  const res = await pool.query(`
+    SELECT 
+      insee_code,
+      slug,
+      name,
+      postal_code,
+      department_code,
+      department_name,
+      region_name,
+      population,
+      score_overall,
+      score_security,
+      score_education,
+      score_amenities,
+      avg_price_sqm_house,
+      avg_price_sqm_apt,
+      ai_synthesis
+    FROM cities 
+    WHERE LOWER(department_code) = LOWER($1) OR LOWER(REPLACE(department_name, ' ', '-')) = LOWER($1)
+    ORDER BY population DESC
+    LIMIT 20
+  `, [slug]);
 
-  const breadcrumbJson = breadcrumbJsonLd([
-    { name: 'Accueil', path: '/' },
-    { name: 'Départements', path: '/departements' },
-    { name: department.name, path: `/departement/${params.slug}` },
-  ]);
+  if (res.rows.length === 0) {
+    notFound();
+  }
+
+  const deptName = res.rows[0].department_name;
+  const deptCode = res.rows[0].department_code;
+
+  const cities = res.rows.map((row) => ({
+    inseeCode: row.insee_code,
+    slug: row.slug,
+    name: row.name,
+    postalCode: row.postal_code,
+    departmentCode: row.department_code,
+    departmentName: row.department_name,
+    regionName: row.region_name,
+    population: Number(row.population),
+    scores: {
+      overall: Math.round(Number(row.score_overall) * 10),
+      security: Math.round(Number(row.score_security) * 10),
+      education: Math.round(Number(row.score_education) * 10),
+      amenities: Math.round(Number(row.score_amenities) * 10),
+      realEstate: 70,
+      nature: 70,
+    },
+    stats: {
+      apartmentPriceM2: {
+        raw: Number(row.avg_price_sqm_apt),
+        display: `${Number(row.avg_price_sqm_apt).toLocaleString('fr-FR')} €`,
+      },
+      housePriceM2: {
+        raw: Number(row.avg_price_sqm_house),
+        display: `${Number(row.avg_price_sqm_house).toLocaleString('fr-FR')} €`,
+      },
+    },
+    lastUpdated: new Date().toISOString(),
+    aiSynthesis: row.ai_synthesis,
+  }));
 
   return (
-    <main className="container mx-auto max-w-6xl px-4 py-10 md:py-14">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJson) }} />
-      <Link
-        href="/departements"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Tous les départements
-      </Link>
-
-      <header className="mt-6">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <MapPin className="h-4 w-4 text-accent" aria-hidden="true" /> {department.region}
-        </div>
-        <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight">
-          {department.name}
+    <main className="container mx-auto max-w-6xl px-4 py-12">
+      <div className="mb-8">
+        <Link href="/recherche" className="text-sm text-muted-foreground hover:underline">
+          ← Retour à la recherche
+        </Link>
+        <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight sm:text-4xl">
+          Communes du département : {deptName} ({deptCode})
         </h1>
-        {department.is_demo && (
-          <Badge
-            variant="outline"
-            className="mt-3 border-warning/50 text-warning-foreground bg-warning/10"
-          >
-            Exemple de démonstration
-          </Badge>
-        )}
-      </header>
+        <p className="mt-2 text-muted-foreground">
+          Données officielles consolidées pour les principales villes du territoire.
+        </p>
+      </div>
 
-      <section className="mt-10">
-        <h2 className="font-serif text-2xl font-semibold">
-          {communes.length} commune{communes.length > 1 ? 's' : ''}
-        </h2>
-        {communes.length > 0 ? (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {communes.map((c) => (
-              <CommuneCard key={c.id} commune={c} indicators={c.commune_indicators ?? []} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-6 text-sm text-muted-foreground">
-            Aucune commune analysée dans ce département pour l’instant.
-          </p>
-        )}
-      </section>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {cities.map((city) => (
+          <CityCard key={city.slug} city={city as any} />
+        ))}
+      </div>
     </main>
   );
 }

@@ -1,38 +1,78 @@
+﻿import pool from '@/lib/db';
 import { Frown, MapPin, AlertCircle, Search as SearchIcon } from 'lucide-react';
-import { searchCommunesUnified, getAllSearchResults } from '@/lib/search';
-import { getDepartments } from '@/lib/mockData';
 import { pageMetadata } from '@/lib/seo';
 import { ResultCard, SearchForm } from '@/components/search';
-import { Badge } from '@/components/ui/badge';
 
 type Props = {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 };
 
 export const metadata = pageMetadata({
   title: 'Rechercher une commune',
-  description:
-    'Recherchez une commune française par nom ou code postal et explorez ses indicateurs de cadre de vie, immobilier, emploi et services. Prototype en démonstration — données fictives.',
+  description: 'Recherchez une commune française par nom ou code postal et explorez ses indicateurs de cadre de vie, immobilier et services.',
   path: '/recherche',
 });
 
 export default async function SearchPage({ searchParams }: Props) {
-  const q = (searchParams.q ?? '').trim();
+  const params = await searchParams;
+  const q = (params.q ?? '').trim();
 
-  let results: Awaited<ReturnType<typeof getAllSearchResults>> = [];
+  let results: any[] = [];
+  let departments: any[] = [];
   let searchError = false;
 
   try {
+    // 1. Recherche des communes (par nom ou code postal)
     if (q) {
-      results = await searchCommunesUnified(q);
+      const res = await pool.query(`
+        SELECT slug, name, postal_code, department_name, region_name, population, score_overall 
+        FROM cities 
+        WHERE name ILIKE $1 OR postal_code LIKE $1 
+        ORDER BY population DESC 
+        LIMIT 24
+      `, [`${q}%`]);
+      
+      results = res.rows.map(r => ({
+        slug: r.slug,
+        name: r.name,
+        postalCode: r.postal_code,
+        departmentName: r.department_name,
+        region: r.region_name,
+        population: Number(r.population),
+        scores: { overall: r.score_overall ? Number(r.score_overall) : null }
+      }));
     } else {
-      results = await getAllSearchResults();
+      // 1b. Si pas de recherche, afficher les plus grandes villes par défaut
+      const res = await pool.query(`
+        SELECT slug, name, postal_code, department_name, region_name, population, score_overall 
+        FROM cities 
+        ORDER BY population DESC 
+        LIMIT 12
+      `);
+      
+      results = res.rows.map(r => ({
+        slug: r.slug,
+        name: r.name,
+        postalCode: r.postal_code,
+        departmentName: r.department_name,
+        region: r.region_name,
+        population: Number(r.population),
+        scores: { overall: r.score_overall ? Number(r.score_overall) : null }
+      }));
     }
-  } catch {
+
+    // 2. Liste dynamique de tous les départements présents en base
+    const depRes = await pool.query(`
+      SELECT DISTINCT department_code, department_name, region_name 
+      FROM cities 
+      ORDER BY department_code
+    `);
+    departments = depRes.rows;
+
+  } catch (err) {
+    console.error(err);
     searchError = true;
   }
-
-  const departments = await getDepartments();
 
   return (
     <main className="container mx-auto max-w-6xl px-4 py-10 md:py-14">
@@ -42,8 +82,7 @@ export default async function SearchPage({ searchParams }: Props) {
         </h1>
         <p className="mt-3 text-muted-foreground text-pretty">
           Explorez les communes françaises présentes dans InfosVilles. Cherchez par
-          nom, code postal ou région. Toutes les communes affichées sont en
-          démonstration.
+          nom ou code postal pour découvrir les indicateurs réels (DVF, INSEE, SSMSI).
         </p>
       </header>
 
@@ -53,9 +92,9 @@ export default async function SearchPage({ searchParams }: Props) {
         {searchError ? (
           <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-12 text-center">
             <AlertCircle className="mx-auto h-10 w-10 text-destructive" aria-hidden="true" />
-            <h3 className="mt-4 font-serif text-lg font-semibold">Erreur de recherche</h3>
+            <h3 className="mt-4 font-serif text-lg font-semibold">Erreur de connexion</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Une erreur est survenue lors de la récupération des communes. Veuillez réessayer.
+              Impossible de récupérer les données depuis la base de données.
             </p>
           </div>
         ) : q && results.length === 0 ? (
@@ -63,17 +102,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <Frown className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
             <h3 className="mt-4 font-serif text-lg font-semibold">Aucune commune trouvée</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Aucune commune ne correspond à « {q} ». Essayez un autre nom, un code
-              postal ou une région.
-            </p>
-          </div>
-        ) : !q && results.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-12 text-center">
-            <SearchIcon className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden="true" />
-            <h3 className="mt-4 font-serif text-lg font-semibold">Commencez votre recherche</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Saisissez un nom de commune, un code postal ou une région ci-dessus pour
- voir les communes disponibles.
+              Aucune commune ne correspond à « {q} ». Essayez un autre nom ou code postal.
             </p>
           </div>
         ) : (
@@ -85,9 +114,6 @@ export default async function SearchPage({ searchParams }: Props) {
                   <span className="text-muted-foreground"> pour « {q} »</span>
                 )}
               </h2>
-              <Badge variant="secondary" className="text-[10px]">
-                Données fictives de démonstration
-              </Badge>
             </div>
             <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {results.map((r) => (
@@ -105,17 +131,17 @@ export default async function SearchPage({ searchParams }: Props) {
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {departments.map((d) => (
             <a
-              key={d.id}
-              href={`/departement/${d.code}`}
+              key={d.department_code}
+              href={`/departement/${d.department_code}`}
               className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary/30"
             >
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 font-mono text-sm font-semibold text-primary">
-                {d.code}
+                {d.department_code}
               </span>
               <div className="flex-1">
-                <div className="font-medium">{d.name}</div>
+                <div className="font-medium">{d.department_name}</div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" aria-hidden="true" /> {d.region}
+                  <MapPin className="h-3 w-3" aria-hidden="true" /> {d.region_name}
                 </div>
               </div>
             </a>

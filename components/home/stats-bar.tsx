@@ -1,33 +1,39 @@
-import { MapPin, BarChart3, FileText } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+﻿import { MapPin, BarChart3, FileText } from "lucide-react";
 
-type Props = {
-  communeCount: number;
-  indicatorCount: number;
-};
-
-export function StatsBar({ communeCount, indicatorCount }: Props) {
+export function StatsBar({ communeCount, indicatorCount }: { communeCount: number; indicatorCount: number }) {
   return (
-    <section className="border-b border-border/60 bg-muted/30">
-      <div className="container mx-auto grid max-w-6xl gap-6 px-4 py-10 sm:grid-cols-3">
-        <StatBlock icon={MapPin} value={`${communeCount}`} label="Communes en démonstration" />
-        <StatBlock icon={BarChart3} value={`${indicatorCount}`} label="Indicateurs illustrés" />
-        <StatBlock icon={FileText} value="En cours" label="Méthodologie en préparation" />
+    <section className="border-y border-border bg-muted/30 py-12">
+      <div className="container mx-auto max-w-6xl px-4">
+        <div className="grid gap-8 sm:grid-cols-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background shadow-sm border border-border">
+              <MapPin className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">{communeCount}</div>
+              <div className="text-sm text-muted-foreground">Communes analysées</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background shadow-sm border border-border">
+              <BarChart3 className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">{indicatorCount}</div>
+              <div className="text-sm text-muted-foreground">Indicateurs officiels</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-background shadow-sm border border-border">
+              <FileText className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-foreground">Open Data</div>
+              <div className="text-sm text-muted-foreground">Sources gouvernementales</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
-  );
-}
-
-function StatBlock({ icon: Icon, value, label }: { icon: LucideIcon; value: string; label: string }) {
-  return (
-    <div className="flex items-center gap-4">
-      <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-card text-primary shadow-sm">
-        <Icon className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <div>
-        <div className="font-serif text-2xl font-semibold">{value}</div>
-        <div className="text-sm text-muted-foreground">{label}</div>
-      </div>
-    </div>
   );
 }
