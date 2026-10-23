@@ -15,7 +15,7 @@ import pool from '@/lib/db';
 export const metadata = pageMetadata({
   title: 'Choisir sa ville : cadre de vie, immobilier et services',
   description:
-    'Découvrez un outil de comparaison des communes françaises selon le budget immobilier, les services, les transports et le cadre de vie.',
+    'Dï¿½couvrez un outil de comparaison des communes franï¿½aises selon le budget immobilier, les services, les transports et le cadre de vie.',
   path: '/',
 });
 
@@ -68,11 +68,11 @@ export default async function HomePage() {
     stats: {
       apartmentPriceM2: {
         raw: Number(row.avg_price_sqm_apt),
-        display: `${Number(row.avg_price_sqm_apt).toLocaleString('fr-FR')} €`,
+        display: `${Number(row.avg_price_sqm_apt).toLocaleString('fr-FR')} ï¿½`,
       },
       housePriceM2: {
         raw: Number(row.avg_price_sqm_house),
-        display: `${Number(row.avg_price_sqm_house).toLocaleString('fr-FR')} €`,
+        display: `${Number(row.avg_price_sqm_house).toLocaleString('fr-FR')} ï¿½`,
       },
     },
     lastUpdated: new Date().toISOString(),
@@ -95,7 +95,7 @@ export default async function HomePage() {
               Exemples de fiches communes
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Des fiches complètes alimentées en direct par PostgreSQL : scores, immobilier et cadre de vie.
+              Des fiches complï¿½tes alimentï¿½es en direct par PostgreSQL : scores, immobilier et cadre de vie.
             </p>
           </div>
           <Link
