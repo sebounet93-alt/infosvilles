@@ -1,4 +1,4 @@
-﻿import { notFound } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import pool from '@/lib/db';
 import { pageMetadata } from '@/lib/seo';
@@ -187,43 +187,22 @@ export default async function CityDetailPage({ params }: Props) {
           <MessageSquareQuote className="h-5 w-5 text-primary" />
           <h2 className="font-serif text-xl font-bold text-foreground">Avis et retours d'expérience</h2>
         </div>
-        <div className="mt-4 rounded-xl border border-border bg-card p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-4">
-            <div>
-              <div className="flex items-center gap-1 text-amber-500">
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current" />
-                <Star className="h-4 w-4 fill-current text-muted-foreground" />
-                <span className="ml-2 font-bold text-foreground">4.2 / 5</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">Basé sur les avis vérifiés de résidents et nouveaux arrivants.</p>
-            </div>
-            <button className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
+        <div className="mt-4 rounded-xl border border-border bg-card p-8 text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <MessageSquareQuote className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-semibold text-foreground">
+              Aucun avis pour le moment
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Vous habitez ou avez vécu à {city.name} ? Partagez votre ressenti sur le cadre de vie, les services et les transports.
+            </p>
+          </div>
+          <div>
+            <button className="rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors">
               Donner mon avis sur {city.name}
             </button>
-          </div>
-
-          <div className="mt-4 space-y-4 text-sm">
-            <div className="rounded-lg bg-muted/40 p-4">
-              <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Résident depuis 4 ans</span>
-                <span>Il y a 2 mois</span>
-              </div>
-              <p className="mt-2 text-foreground/90">
-                « Très bon équilibre entre commerces de proximité et accessibilité des transports. Les infrastructures scolaires sont complètes et le quartier reste agréable au quotidien. »
-              </p>
-            </div>
-            <div className="rounded-lg bg-muted/40 p-4">
-              <div className="flex justify-between items-center text-xs text-muted-foreground">
-                <span className="font-semibold text-foreground">Installé en famille</span>
-                <span>Il y a 5 mois</span>
-              </div>
-              <p className="mt-2 text-foreground/90">
-                « Ville dynamique avec une offre associative variée. L'accès aux grands axes est rapide, même si le stationnement en centre-ville peut parfois s'avérer difficile aux heures de pointe. »
-              </p>
-            </div>
           </div>
         </div>
       </section>
